@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body {
+  height: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  @apply bg-bg-light text-text-primary-light dark:bg-bg dark:text-text-primary font-mono antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button { -webkit-tap-highlight-color: transparent; }
+
+/* Hide scrollbars on the timeline for a cleaner look (still scrollable) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

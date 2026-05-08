@@ -1,0 +1,17 @@
+{
+  "name": "TimeBox",
+  "short_name": "TimeBox",
+  "description": "Personal time-blocking, no subscription.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a08",
+  "theme_color": "#0a0a08",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
