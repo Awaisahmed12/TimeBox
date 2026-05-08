@@ -104,7 +104,7 @@ export function TimeBlock({ block }: { block: Block }) {
       } touch-none select-none`}
       style={{ top, height, zIndex: 5 }}
     >
-      <div className="px-2 pt-1 pb-1 flex items-start gap-2 h-full">
+      <div className="px-2 py-1 flex items-center gap-2 h-full">
         <button
           data-block-action
           onClick={(e) => {
@@ -113,7 +113,7 @@ export function TimeBlock({ block }: { block: Block }) {
             if ('vibrate' in navigator) navigator.vibrate(15)
           }}
           aria-label={block.done ? 'Mark not done' : 'Mark done'}
-          className={`mt-0.5 w-4 h-4 shrink-0 rounded border ${
+          className={`w-3.5 h-3.5 shrink-0 rounded-sm border ${
             block.done ? 'bg-accent border-accent' : 'border-muted-light dark:border-muted'
           }`}
         >
@@ -123,76 +123,72 @@ export function TimeBlock({ block }: { block: Block }) {
                 d="M3 8l3 3 7-7"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </svg>
           )}
         </button>
-        <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-mono text-muted-light dark:text-muted leading-none">
-            {formatHM(startMin)} – {formatHM(startMin + durationMin)}
-          </div>
-          {editing ? (
-            <input
-              autoFocus
-              defaultValue={block.title}
-              onBlur={(e) => {
-                update(block.id, { title: e.currentTarget.value.trim() })
+        {editing ? (
+          <input
+            autoFocus
+            defaultValue={block.title}
+            onBlur={(e) => {
+              update(block.id, { title: e.currentTarget.value.trim() })
+              setEditing(false)
+              if (e.currentTarget.value.trim() === '' && !block.done) remove(block.id)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') {
                 setEditing(false)
-                if (e.currentTarget.value.trim() === '' && !block.done) remove(block.id)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                if (e.key === 'Escape') {
-                  setEditing(false)
-                  if (block.title.trim() === '') remove(block.id)
-                }
-                e.stopPropagation()
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="w-full bg-transparent outline-none text-sm font-mono mt-1"
-              placeholder="What?"
-            />
-          ) : (
-            <button
-              data-block-action
-              onClick={(e) => {
-                e.stopPropagation()
-                setEditing(true)
-              }}
-              className="text-left w-full text-sm font-mono mt-0.5 truncate"
-            >
-              {block.title || <span className="text-muted-light dark:text-muted">Untitled</span>}
-            </button>
-          )}
-        </div>
-        <div className="flex flex-col gap-1 shrink-0">
+                if (block.title.trim() === '') remove(block.id)
+              }
+              e.stopPropagation()
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="flex-1 min-w-0 bg-transparent outline-none text-xs font-mono"
+            placeholder="What?"
+          />
+        ) : (
           <button
             data-block-action
             onClick={(e) => {
               e.stopPropagation()
-              const cap = Math.min(pomoMin, durationMin)
-              startPomo(block.id, cap)
+              setEditing(true)
             }}
-            aria-label="Start focus timer"
-            className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border-light dark:border-border text-muted-light dark:text-muted hover:text-accent"
+            className="flex-1 min-w-0 text-left text-xs font-mono truncate"
           >
-            ▶
+            {block.title || <span className="text-muted-light dark:text-muted">Untitled</span>}
           </button>
-          <button
-            data-block-action
-            onClick={(e) => {
-              e.stopPropagation()
-              if (confirm('Delete this block?')) remove(block.id)
-            }}
-            aria-label="Delete block"
-            className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border-light dark:border-border text-muted-light dark:text-muted hover:text-accent2"
-          >
-            ✕
-          </button>
-        </div>
+        )}
+        <span className="text-[9px] font-mono tabular-nums text-muted-light dark:text-muted shrink-0">
+          {formatHM(startMin)}–{formatHM(startMin + durationMin)}
+        </span>
+        <button
+          data-block-action
+          onClick={(e) => {
+            e.stopPropagation()
+            const cap = Math.min(pomoMin, durationMin)
+            startPomo(block.id, cap)
+          }}
+          aria-label="Start focus timer"
+          className="text-[10px] font-mono w-5 h-5 shrink-0 flex items-center justify-center rounded text-muted-light dark:text-muted hover:text-accent"
+        >
+          ▶
+        </button>
+        <button
+          data-block-action
+          onClick={(e) => {
+            e.stopPropagation()
+            if (confirm('Delete this block?')) remove(block.id)
+          }}
+          aria-label="Delete block"
+          className="text-[11px] font-mono w-5 h-5 shrink-0 flex items-center justify-center rounded text-muted-light dark:text-muted hover:text-accent2"
+        >
+          ✕
+        </button>
       </div>
       <div
         data-resize-handle
