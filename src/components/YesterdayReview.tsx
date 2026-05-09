@@ -32,6 +32,7 @@ export function YesterdayReview() {
   const inboxLoaded = useInbox((s) => s.loaded)
   const removeInbox = useInbox((s) => s.remove)
   const markUnscheduled = useInbox((s) => s.markUnscheduled)
+  const toggleInboxDone = useInbox((s) => s.toggleDone)
   const [data, setData] = useState<ReviewData | null>(null)
   const [open, setOpen] = useState(false)
 
@@ -73,7 +74,7 @@ export function YesterdayReview() {
       ySnap.blocks = ySnap.blocks.filter((x) => x.id !== b.id)
       await storage.saveDay(ySnap)
     }
-    setData({ ...data, blocks: data.blocks.filter((x) => x.id !== b.id) })
+    setData((d) => (d ? { ...d, blocks: d.blocks.filter((x) => x.id !== b.id) } : d))
   }
 
   async function dismissBlock(b: Block) {
@@ -83,7 +84,7 @@ export function YesterdayReview() {
       ySnap.blocks = ySnap.blocks.map((x) => (x.id === b.id ? { ...x, done: true } : x))
       await storage.saveDay(ySnap)
     }
-    setData({ ...data, blocks: data.blocks.filter((x) => x.id !== b.id) })
+    setData((d) => (d ? { ...d, blocks: d.blocks.filter((x) => x.id !== b.id) } : d))
   }
 
   async function close() {
@@ -151,13 +152,29 @@ export function YesterdayReview() {
               >
                 <span className="flex-1 font-mono text-sm truncate">{i.title}</span>
                 <button
-                  onClick={() => markUnscheduled(i.id)}
+                  onClick={async () => {
+                    await toggleInboxDone(i.id)
+                    setData((d) => (d ? { ...d, inboxLeft: d.inboxLeft.filter((x) => x.id !== i.id) } : d))
+                  }}
+                  aria-label="Mark done"
+                  className="text-[11px] font-mono uppercase px-2 py-1 rounded bg-accent text-bg"
+                >
+                  Done
+                </button>
+                <button
+                  onClick={async () => {
+                    await markUnscheduled(i.id)
+                    setData((d) => (d ? { ...d, inboxLeft: d.inboxLeft.filter((x) => x.id !== i.id) } : d))
+                  }}
                   className="text-[11px] font-mono uppercase px-2 py-1 rounded border border-border-light dark:border-border"
                 >
                   Keep
                 </button>
                 <button
-                  onClick={() => removeInbox(i.id)}
+                  onClick={async () => {
+                    await removeInbox(i.id)
+                    setData((d) => (d ? { ...d, inboxLeft: d.inboxLeft.filter((x) => x.id !== i.id) } : d))
+                  }}
                   className="text-[11px] font-mono uppercase px-2 py-1 rounded border border-border-light dark:border-border"
                 >
                   Toss
