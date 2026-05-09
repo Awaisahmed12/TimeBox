@@ -16,6 +16,21 @@ const COLOR_CLASSES: Record<NonNullable<Block['color']>, string> = {
   gray: 'bg-muted/20 border-muted/60 text-text-primary-light dark:text-text-primary',
 }
 
+const DRAG_THRESHOLD_PX = 5
+
+interface MoveOrigin {
+  pointerId: number
+  y: number
+  startMin: number
+  dragging: boolean
+}
+
+interface ResizeOrigin {
+  pointerId: number
+  y: number
+  durationMin: number
+}
+
 export function TimeBlock({ block }: { block: Block }) {
   const update = useDay((s) => s.updateBlock)
   const remove = useDay((s) => s.removeBlock)
@@ -26,8 +41,9 @@ export function TimeBlock({ block }: { block: Block }) {
   const [editing, setEditing] = useState(block.title === '' && !block.done)
   const [draftStart, setDraftStart] = useState<number | null>(null)
   const [draftDuration, setDraftDuration] = useState<number | null>(null)
-  const moveOrigin = useRef<{ y: number; startMin: number } | null>(null)
-  const resizeOrigin = useRef<{ y: number; durationMin: number } | null>(null)
+  const moveOrigin = useRef<MoveOrigin | null>(null)
+  const resizeOrigin = useRef<ResizeOrigin | null>(null)
+  const blockRef = useRef<HTMLDivElement>(null)
 
   const startMin = draftStart ?? block.startMin
   const durationMin = draftDuration ?? block.durationMin
@@ -39,26 +55,37 @@ export function TimeBlock({ block }: { block: Block }) {
     if (editing) return
     const target = e.target as HTMLElement
     if (target.closest('[data-resize-handle]')) return
-    if (target.closest('[data-block-action]')) return
-    e.preventDefault()
-    e.stopPropagation()
-    moveOrigin.current = { y: e.clientY, startMin: block.startMin }
-    setDraftStart(block.startMin)
-    ;(e.target as Element).setPointerCapture?.(e.pointerId)
+    if (target.closest('[data-no-drag]')) return
+    moveOrigin.current = {
+      pointerId: e.pointerId,
+      y: e.clientY,
+      startMin: block.startMin,
+      dragging: false,
+    }
+    blockRef.current?.setPointerCapture?.(e.pointerId)
   }
 
   function onMovePointerMove(e: React.PointerEvent) {
-    if (!moveOrigin.current) return
-    const dy = e.clientY - moveOrigin.current.y
+    const origin = moveOrigin.current
+    if (!origin || origin.pointerId !== e.pointerId) return
+    const dy = e.clientY - origin.y
+    if (!origin.dragging && Math.abs(dy) < DRAG_THRESHOLD_PX) return
+    if (!origin.dragging) {
+      origin.dragging = true
+    }
+    e.preventDefault()
     const dMin = Math.round(dy / PX_PER_MIN)
-    const next = Math.max(0, Math.min(24 * 60 - durationMin, snapToQuarterHour(moveOrigin.current.startMin + dMin)))
+    const next = Math.max(
+      0,
+      Math.min(24 * 60 - durationMin, snapToQuarterHour(origin.startMin + dMin)),
+    )
     setDraftStart(next)
   }
 
   function onMovePointerUp(e: React.PointerEvent) {
-    const target = e.target as Element
-    target.releasePointerCapture?.(e.pointerId)
-    if (moveOrigin.current && draftStart !== null && draftStart !== block.startMin) {
+    const origin = moveOrigin.current
+    blockRef.current?.releasePointerCapture?.(e.pointerId)
+    if (origin?.dragging && draftStart !== null && draftStart !== block.startMin) {
       update(block.id, { startMin: draftStart })
     }
     moveOrigin.current = null
@@ -68,24 +95,32 @@ export function TimeBlock({ block }: { block: Block }) {
   function onResizePointerDown(e: React.PointerEvent) {
     e.preventDefault()
     e.stopPropagation()
-    resizeOrigin.current = { y: e.clientY, durationMin: block.durationMin }
+    resizeOrigin.current = {
+      pointerId: e.pointerId,
+      y: e.clientY,
+      durationMin: block.durationMin,
+    }
     setDraftDuration(block.durationMin)
-    ;(e.target as Element).setPointerCapture?.(e.pointerId)
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
   }
 
   function onResizePointerMove(e: React.PointerEvent) {
-    if (!resizeOrigin.current) return
-    const dy = e.clientY - resizeOrigin.current.y
+    const origin = resizeOrigin.current
+    if (!origin || origin.pointerId !== e.pointerId) return
+    const dy = e.clientY - origin.y
     const dMin = Math.round(dy / PX_PER_MIN)
-    const next = Math.max(15, snapToQuarterHour(resizeOrigin.current.durationMin + dMin))
+    const next = Math.max(15, snapToQuarterHour(origin.durationMin + dMin))
     const cap = 24 * 60 - block.startMin
     setDraftDuration(Math.min(next, cap))
   }
 
   function onResizePointerUp(e: React.PointerEvent) {
-    const target = e.target as Element
-    target.releasePointerCapture?.(e.pointerId)
-    if (resizeOrigin.current && draftDuration !== null && draftDuration !== block.durationMin) {
+    ;(e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId)
+    if (
+      resizeOrigin.current &&
+      draftDuration !== null &&
+      draftDuration !== block.durationMin
+    ) {
       update(block.id, { durationMin: draftDuration })
     }
     resizeOrigin.current = null
@@ -94,6 +129,7 @@ export function TimeBlock({ block }: { block: Block }) {
 
   return (
     <div
+      ref={blockRef}
       data-block
       onPointerDown={onMovePointerDown}
       onPointerMove={onMovePointerMove}
@@ -101,12 +137,12 @@ export function TimeBlock({ block }: { block: Block }) {
       onPointerCancel={onMovePointerUp}
       className={`absolute left-1 right-1 rounded border ${colorClass} ${
         block.done ? 'opacity-50 line-through' : ''
-      } touch-none select-none`}
-      style={{ top, height, zIndex: 5 }}
+      } ${moveOrigin.current?.dragging ? 'shadow-lg ring-1 ring-accent/60' : ''} touch-none select-none`}
+      style={{ top, height, zIndex: moveOrigin.current?.dragging ? 20 : 5 }}
     >
       <div className="px-2 py-1 flex items-center gap-2 h-full">
         <button
-          data-block-action
+          data-no-drag
           onClick={(e) => {
             e.stopPropagation()
             toggle(block.id)
@@ -132,6 +168,7 @@ export function TimeBlock({ block }: { block: Block }) {
         </button>
         {editing ? (
           <input
+            data-no-drag
             autoFocus
             defaultValue={block.title}
             onBlur={(e) => {
@@ -153,21 +190,21 @@ export function TimeBlock({ block }: { block: Block }) {
           />
         ) : (
           <button
-            data-block-action
             onClick={(e) => {
               e.stopPropagation()
+              if (moveOrigin.current?.dragging) return
               setEditing(true)
             }}
-            className="flex-1 min-w-0 text-left text-xs font-mono truncate"
+            className="flex-1 min-w-0 text-left text-xs font-mono truncate cursor-grab active:cursor-grabbing"
           >
             {block.title || <span className="text-muted-light dark:text-muted">Untitled</span>}
           </button>
         )}
-        <span className="text-[9px] font-mono tabular-nums text-muted-light dark:text-muted shrink-0">
+        <span className="text-[9px] font-mono tabular-nums text-muted-light dark:text-muted shrink-0 pointer-events-none">
           {formatHM(startMin)}–{formatHM(startMin + durationMin)}
         </span>
         <button
-          data-block-action
+          data-no-drag
           onClick={(e) => {
             e.stopPropagation()
             const cap = Math.min(pomoMin, durationMin)
@@ -179,7 +216,7 @@ export function TimeBlock({ block }: { block: Block }) {
           ▶
         </button>
         <button
-          data-block-action
+          data-no-drag
           onClick={(e) => {
             e.stopPropagation()
             if (confirm('Delete this block?')) remove(block.id)

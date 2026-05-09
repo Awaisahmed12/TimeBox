@@ -12,7 +12,21 @@ interface DragState {
   x: number
   y: number
   pointerId: number
+  startX: number
+  startY: number
+  active: boolean
   hoverMin: number | null
+}
+
+const DRAG_THRESHOLD_PX = 6
+
+function timelineYToMin(clientY: number): number | null {
+  const tl = document.querySelector('[data-timeline]') as HTMLDivElement | null
+  if (!tl) return null
+  const rect = tl.getBoundingClientRect()
+  if (clientY < rect.top || clientY > rect.bottom) return null
+  const y = clientY - rect.top
+  return Math.max(0, Math.min(24 * 60 - 30, snapToQuarterHour(y / PX_PER_MIN)))
 }
 
 export function Inbox() {
@@ -30,38 +44,38 @@ export function Inbox() {
 
   const dragRef = useRef<DragState | null>(null)
   dragRef.current = drag
-
-  function timelineYToMin(clientY: number): number | null {
-    const tl = document.querySelector('[data-timeline]') as HTMLDivElement | null
-    if (!tl) return null
-    const rect = tl.getBoundingClientRect()
-    if (clientY < rect.top || clientY > rect.bottom) return null
-    const y = clientY - rect.top
-    return Math.max(0, Math.min(24 * 60 - 30, snapToQuarterHour(y / PX_PER_MIN)))
-  }
+  const handleRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
 
   useEffect(() => {
     if (!drag) return
     function onMove(e: PointerEvent) {
-      if (!dragRef.current || e.pointerId !== dragRef.current.pointerId) return
-      const hover = timelineYToMin(e.clientY)
-      setDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY, hoverMin: hover } : d))
+      const cur = dragRef.current
+      if (!cur || e.pointerId !== cur.pointerId) return
+      const dx = e.clientX - cur.startX
+      const dy = e.clientY - cur.startY
+      let active = cur.active
+      if (!active && Math.abs(dx) + Math.abs(dy) >= DRAG_THRESHOLD_PX) active = true
+      if (active && open) setOpen(false)
+      const hover = active ? timelineYToMin(e.clientY) : null
+      setDrag({ ...cur, x: e.clientX, y: e.clientY, active, hoverMin: hover })
     }
     function onUp(e: PointerEvent) {
       const cur = dragRef.current
       if (!cur || e.pointerId !== cur.pointerId) return
-      const hover = timelineYToMin(e.clientY)
-      if (hover !== null) {
-        addBlock({
-          startMin: hover,
-          durationMin: 30,
-          title: cur.item.title,
-          fromInboxId: cur.item.id,
-        }).then(() => markScheduled(cur.item.id, date))
+      if (cur.active) {
+        const hover = timelineYToMin(e.clientY)
+        if (hover !== null) {
+          addBlock({
+            startMin: hover,
+            durationMin: 30,
+            title: cur.item.title,
+            fromInboxId: cur.item.id,
+          }).then(() => markScheduled(cur.item.id, date))
+        }
       }
       setDrag(null)
     }
-    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointermove', onMove, { passive: false })
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onUp)
     return () => {
@@ -69,7 +83,7 @@ export function Inbox() {
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
     }
-  }, [drag, addBlock, markScheduled, date])
+  }, [drag, addBlock, markScheduled, date, open])
 
   return (
     <>
@@ -122,19 +136,28 @@ export function Inbox() {
                 className="flex items-center gap-2 px-2 py-1.5 bg-bg-light dark:bg-bg border border-border-light dark:border-border rounded"
               >
                 <button
+                  ref={(el) => {
+                    if (el) handleRefs.current.set(it.id, el)
+                    else handleRefs.current.delete(it.id)
+                  }}
                   onPointerDown={(e) => {
+                    if (e.button !== undefined && e.button !== 0) return
                     e.preventDefault()
+                    e.currentTarget.setPointerCapture?.(e.pointerId)
                     setDrag({
                       item: it,
                       x: e.clientX,
                       y: e.clientY,
                       pointerId: e.pointerId,
+                      startX: e.clientX,
+                      startY: e.clientY,
+                      active: false,
                       hoverMin: null,
                     })
-                    if (open) setOpen(false)
                   }}
                   aria-label="Drag to schedule"
-                  className="cursor-grab active:cursor-grabbing text-muted-light dark:text-muted px-1"
+                  className="touch-none cursor-grab active:cursor-grabbing text-muted-light dark:text-muted px-2 py-1"
+                  style={{ touchAction: 'none' }}
                 >
                   ⋮⋮
                 </button>
@@ -152,7 +175,7 @@ export function Inbox() {
         </div>
       </div>
 
-      {drag && (
+      {drag?.active && (
         <>
           <div
             className="pointer-events-none fixed z-50 px-3 py-2 rounded bg-accent text-bg font-mono text-sm shadow-xl"
@@ -160,9 +183,7 @@ export function Inbox() {
           >
             {drag.item.title}
           </div>
-          {drag.hoverMin !== null && (
-            <DragHint min={drag.hoverMin} />
-          )}
+          {drag.hoverMin !== null && <DragHint min={drag.hoverMin} />}
         </>
       )}
     </>
