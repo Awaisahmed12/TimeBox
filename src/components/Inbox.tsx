@@ -31,7 +31,7 @@ function timelineYToMin(clientY: number): number | null {
 
 export function Inbox() {
   const all = useInbox((s) => s.items)
-  const add = useInbox((s) => s.add)
+  const addMany = useInbox((s) => s.addMany)
   const remove = useInbox((s) => s.remove)
   const markScheduled = useInbox((s) => s.markScheduled)
   const addBlock = useDay((s) => s.addBlock)
@@ -106,8 +106,9 @@ export function Inbox() {
             <form
               onSubmit={(e) => {
                 e.preventDefault()
-                if (!draft.trim()) return
-                add(draft)
+                const lines = draft.split('\n').map((l) => l.trim()).filter(Boolean)
+                if (lines.length === 0) return
+                addMany(lines)
                 setDraft('')
               }}
               className="flex gap-2 mb-2"
@@ -115,7 +116,7 @@ export function Inbox() {
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="capture a thought…"
+                placeholder="capture a thought… (paste a list to split)"
                 className="flex-1 px-3 py-2 bg-bg-light dark:bg-bg border border-border-light dark:border-border rounded font-mono text-sm outline-none focus:border-accent"
               />
               <button

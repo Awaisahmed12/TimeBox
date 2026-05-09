@@ -10,6 +10,7 @@ interface InboxState {
   loaded: boolean
   load: () => Promise<void>
   add: (title: string) => Promise<InboxItem>
+  addMany: (titles: string[]) => Promise<InboxItem[]>
   remove: (id: string) => Promise<void>
   toggleDone: (id: string) => Promise<void>
   markScheduled: (id: string, date: string) => Promise<void>
@@ -38,6 +39,23 @@ export const useInbox = create<InboxState>((set, get) => ({
     set({ items })
     await persist(items)
     return item
+  },
+  async addMany(titles) {
+    const now = Date.now()
+    const fresh: InboxItem[] = titles
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .map((title, idx) => ({
+        id: newId(),
+        title,
+        createdAt: now + idx,
+        done: false,
+      }))
+    if (fresh.length === 0) return []
+    const items = [...fresh, ...get().items]
+    set({ items })
+    await persist(items)
+    return fresh
   },
   async remove(id) {
     const items = get().items.filter((i) => i.id !== id)
