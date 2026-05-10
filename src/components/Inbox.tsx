@@ -88,7 +88,7 @@ export function Inbox() {
   return (
     <>
       <div
-        className={`fixed inset-x-0 bottom-12 z-20 transition-transform duration-200 ${
+        className={`fixed inset-x-0 bottom-nav-aware z-20 transition-transform duration-200 ${
           open ? 'translate-y-0' : 'translate-y-[calc(100%-44px)]'
         }`}
       >

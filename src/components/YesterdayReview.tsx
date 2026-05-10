@@ -95,7 +95,10 @@ export function YesterdayReview() {
 
   if (!open || !data) return null
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center px-4 pt-4"
+      style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+    >
       <div className="w-full max-w-[480px] max-h-[90vh] overflow-y-auto bg-surface-light dark:bg-surface border border-border-light dark:border-border rounded-2xl">
         <div className="p-4 border-b border-border-light dark:border-border">
           <div className="text-[10px] font-mono uppercase tracking-wider text-muted-light dark:text-muted">

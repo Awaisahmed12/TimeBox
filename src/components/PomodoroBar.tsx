@@ -62,7 +62,7 @@ export function PomodoroBar() {
   const ss = remaining % 60
 
   return (
-    <div className="fixed bottom-12 inset-x-0 z-40 pointer-events-none">
+    <div className="fixed bottom-nav-aware inset-x-0 z-40 pointer-events-none">
       <div className="mx-auto max-w-[480px] px-3 pb-2 pointer-events-auto">
         <div className="rounded-lg border border-accent bg-surface-light dark:bg-surface shadow-xl">
           <div className="h-1 rounded-t-lg bg-border-light dark:bg-border overflow-hidden">

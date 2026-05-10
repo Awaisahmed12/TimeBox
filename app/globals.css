@@ -21,3 +21,9 @@ button { -webkit-tap-highlight-color: transparent; }
 /* Hide scrollbars on the timeline for a cleaner look (still scrollable) */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* iOS safe-area helpers — viewport meta uses viewport-fit=cover */
+.pt-safe { padding-top: max(0.75rem, env(safe-area-inset-top)); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.bottom-nav-aware { bottom: calc(3rem + env(safe-area-inset-bottom)); }
+.pb-page { padding-bottom: calc(8rem + env(safe-area-inset-bottom)); }
